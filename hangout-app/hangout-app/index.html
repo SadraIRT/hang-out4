@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hangout 4 — Plan & Split (تومان)</title>
+<meta name="theme-color" content="#FF9F0A">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/style.css">
+<script src="config.js"></script>
+</head>
+<body>
+<!-- AUTH VIEW -->
+<div id="authView" class="auth-wrap">
+  <div class="auth-card card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="width:38px;height:38px;background:#FF9F0A;border-radius:10px;display:grid;place-items:center;font-weight:900;color:#111">4</div>
+      <div><div style="font-weight:900">Hangout 4</div><div class="subtle">Plan together — Split in تومان</div></div>
+      <span class="badge badge-accent" style="margin-left:auto">PWA</span>
+    </div>
+    <h1>Welcome back</h1>
+    <p>Login to manage multiple hangouts for your group</p>
+    <div class="tabs">
+      <button id="tabLogin" class="active" onclick="switchAuth('login')">Login</button>
+      <button id="tabRegister" onclick="switchAuth('register')">Register</button>
+    </div>
+    <div id="loginForm">
+      <div class="field"><label>Email</label><input id="loginEmail" type="email" placeholder="sara@example.com"></div>
+      <div class="field"><label>Password</label><input id="loginPass" type="password" placeholder="••••••••"></div>
+      <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Login →</button>
+      <div style="text-align:center;margin-top:10px"><a href="#" onclick="openForgotModal();return false;" style="font-size:13px;color:var(--accent)">Forgot password?</a></div>
+      <div style="text-align:center;margin-top:10px" class="subtle">— or —</div>
+      <button class="btn btn-ghost" style="width:100%;border:1px dashed var(--border);margin-top:8px" onclick="doGuestLogin()">Continue as Guest →</button>
+      <div class="hint" style="margin-top:8px">Guest: one hangout only, auto-deleted when hangout done.</div>
+    </div>
+    <div id="registerForm" class="hidden">
+      <div class="field"><label>Display name</label><input id="regName" placeholder="Sara"></div>
+      <div class="field"><label>Email</label><input id="regEmail" type="email" placeholder="sara@example.com"></div>
+      <div class="field"><label>Password</label><input id="regPass" type="password" placeholder="Min 4 chars"></div>
+      <button class="btn btn-primary" style="width:100%" onclick="doRegister()">Create account</button>
+      <div style="text-align:center;margin-top:10px"><a href="#" onclick="doGuestLogin();return false;" style="font-size:13px;color:var(--accent)">Continue as Guest →</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- APP VIEW -->
+<div id="appView" class="hidden">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo"><div style="width:32px;height:32px;background:#FF9F0A;border-radius:8px;display:grid;place-items:center;color:#111">✦</div> Hangout 4 <span>· تومان</span></div>
+      <div id="liveDot" class="subtle" style="font-size:11px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;background:var(--success);border-radius:50%;display:inline-block"></span> Live Sync</div>
+      <div class="card" style="padding:12px;display:flex;align-items:center;gap:10px">
+        <div id="meAvatar" class="avatar" style="background:#FF9F0A">?</div>
+        <div style="flex:1;min-width:0"><div id="meName" style="font-weight:800;font-size:13px"></div><div id="meEmail" class="subtle" style="font-size:11px;overflow:hidden;text-overflow:ellipsis"></div></div>
+        <button class="btn btn-ghost btn-sm" onclick="logout()">Logout</button>
+      </div>
+      <nav class="nav">
+        <button id="navDashboard" class="active" onclick="router('dashboard')">🏠 Dashboard</button>
+        <button id="navHost" class="hidden" onclick="openHostPanel()" style="border:1px solid var(--accent);color:var(--accent)">👑 Host Panel</button>
+        <button onclick="router('history')">🕘 History</button>
+        <button onclick="exportData()">⬇ Export</button>
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer;text-align:center">⬆ Import <input id="importFile" type="file" accept=".json" hidden onchange="importData(event)"></label>
+      </nav>
+      <div class="card" style="padding:12px">
+        <div class="subtle" style="margin-bottom:8px">Quick stats</div>
+        <div id="sidebarStats" class="subtle"></div>
+        <div style="margin-top:8px" class="subtle">Not updating? <a href="#" onclick="forceRefresh();return false;" style="color:var(--accent)">⟳ Sync</a> · <a href="#" onclick="clearCacheAndReload();return false;" style="color:var(--accent)">Clear cache</a></div>
+      </div>
+      <div class="subtle" style="margin-top:auto">Currency: <b style="color:var(--accent)">تومان (Toman)</b> · 1 تومان = 10 ریال<br><span class="subtle">Tip: Hard reload Ctrl+Shift+R if ngrok stale</span></div>
+    </aside>
+    <main class="main">
+      <div id="dashboardView"></div>
+      <div id="hangoutView" class="hidden"></div>
+    </main>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div id="modalCreate" class="modal-bg hidden">
+  <div class="modal">
+    <h3>Create new hangout</h3>
+    <div class="field"><label>Title</label><input id="newTitle" placeholder="Friday Cafe & Movie"></div>
+    <div class="field"><label>Description</label><textarea id="newDesc" rows="2" placeholder="Chill at Valiasr..."></textarea></div>
+    <div class="field"><label>Invite members (choose up to 9 + you = 10)</label><div id="memberPicker" class="grid" style="gap:6px"></div><div class="hint">Registered users appear here. Or type name and press Add.</div>
+      <div class="flex" style="margin-top:8px"><input id="customMember" placeholder="Add guest name (e.g., Mina)"><button class="btn btn-ghost btn-sm" onclick="addCustomMember()">Add</button></div>
+    </div>
+    <div class="flex justify-between" style="margin-top:12px">
+      <button class="btn btn-ghost" onclick="closeModal('modalCreate')">Cancel</button>
+      <button class="btn btn-primary" onclick="createHangout()">Create · 10 max</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalExpense" class="modal-bg hidden">
+  <div class="modal">
+    <h3>Add expense (تومان)</h3>
+    <div class="field"><label>Description</label><input id="expDesc" placeholder="Dinner at restaurant"></div>
+    <div class="row2">
+      <div class="field"><label>Amount (تومان)</label><input id="expAmount" type="text" inputmode="numeric" placeholder="50,000" autocomplete="off"></div>
+      <div class="field"><label>Payer</label><select id="expPayer"></select></div>
+    </div>
+    <div class="field"><label>Split type</label>
+      <select id="expSplitType" onchange="onSplitTypeChange()">
+        <option value="equal">Equal (÷ all)</option>
+        <option value="exact">Custom amounts (تومان)</option>
+        <option value="percent">Percentages (%)</option>
+        <option value="shares">Shares (e.g., 2:1:1:1)</option>
+      </select>
+    </div>
+    <div id="expParticipants"></div>
+    <div id="expCustomArea"></div>
+    <div class="flex justify-between" style="margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeModal('modalExpense')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveExpense()">Add expense</button>
+    </div>
+    <div id="expError" class="subtle" style="color:var(--danger);margin-top:8px"></div>
+  </div>
+</div>
+
+<div id="modalPayment" class="modal-bg hidden">
+  <div class="modal">
+    <h3>Record payment (تسویه)</h3>
+    <div class="row2">
+      <div class="field"><label>From (payer)</label><select id="payFrom"></select></div>
+      <div class="field"><label>To (receiver)</label><select id="payTo"></select></div>
+    </div>
+    <div class="field"><label>Amount (تومان)</label><input id="payAmount" type="text" inputmode="numeric" placeholder="10,000" autocomplete="off"></div>
+    <div class="field"><label>Note</label><input id="payNote" placeholder="Cash / transfer"></div>
+    <div class="flex justify-between" style="margin-top:12px">
+      <button class="btn btn-ghost" onclick="closeModal('modalPayment')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePayment()">Record</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalPoll" class="modal-bg hidden">
+  <div class="modal">
+    <h3 id="pollTitle">Add option</h3>
+    <div id="pollFields"></div>
+    <div class="flex justify-between" style="margin-top:12px">
+      <button class="btn btn-ghost" onclick="closeModal('modalPoll')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePoll()">Add</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalHost" class="modal-bg hidden">
+  <div class="modal" style="max-width:640px">
+    <h3>👑 Host Panel — Control Users & Hangouts</h3>
+    <div class="subtle" id="hostInfo">Manage members, kick, make admin, transfer host</div>
+    <div id="hostContent" style="margin-top:12px"></div>
+    <div class="flex justify-between" style="margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeModal('modalHost')">Close</button>
+      <button class="btn btn-primary" onclick="refreshHostPanel()">Refresh</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalForgot" class="modal-bg hidden">
+  <div class="modal">
+    <h3>Reset password</h3>
+    <div class="subtle" style="margin-bottom:12px">Enter your email and new password. Works offline too. Host can also reset for you via Host Panel.</div>
+    <div class="field"><label>Email</label><input id="forgotEmail" type="email" placeholder="sara@example.com"></div>
+    <div class="field"><label>New password</label><input id="forgotPass" type="password" placeholder="Min 4 chars"></div>
+    <div class="field"><label>Confirm new password</label><input id="forgotPass2" type="password" placeholder="Repeat"></div>
+    <div id="forgotError" class="subtle" style="color:var(--danger);margin-top:6px"></div>
+    <div class="flex justify-between" style="margin-top:12px">
+      <button class="btn btn-ghost" onclick="closeModal('modalForgot')">Cancel</button>
+      <button class="btn btn-primary" onclick="doForgot()">Reset → Login</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
